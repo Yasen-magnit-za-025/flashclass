@@ -1,11 +1,11 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { Button, ErrorBanner, Field, Notice } from "@/components/ui";
+import { Button, Field } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
-import { toAppError } from "@/lib/errors";
+import { AppError, toAppError } from "@/lib/errors";
 import { supabase } from "@/lib/supabase";
-
-const MIN_PASSWORD = 8;
+import { AuthErrorAlert, AuthLayout, AuthLink, FormAlert, PasswordField } from "./components";
+import { MIN_PASSWORD_LENGTH, validateEmail, validateNewPassword } from "./validation";
 
 /**
  * Open signup always creates a STUDENT account. Roles are granted only by the
@@ -17,17 +17,38 @@ export function SignUpPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<unknown>(null);
+  const [error, setError] = useState<AppError | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const refs = {
+    name: useRef<HTMLInputElement>(null),
+    email: useRef<HTMLInputElement>(null),
+    password: useRef<HTMLInputElement>(null),
+    privacy: useRef<HTMLInputElement>(null),
+  };
 
-  const passwordTooShort = password.length > 0 && password.length < MIN_PASSWORD;
+  const errors = {
+    name: displayName.trim() ? null : ("auth.validation.name_required" as const),
+    email: validateEmail(email),
+    password: validateNewPassword(password),
+    privacy: acceptedPrivacy ? null : ("auth.validation.privacy_required" as const),
+  };
+  const show = (field: keyof typeof errors) =>
+    (touched[field] || submitted) && errors[field] ? t(errors[field]!, { min: MIN_PASSWORD_LENGTH }) : undefined;
+  const touch = (field: string) => () => setTouched((x) => ({ ...x, [field]: true }));
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (password.length < MIN_PASSWORD || !acceptedPrivacy) return;
-    setBusy(true);
+    if (busy) return;
+    setSubmitted(true);
     setError(null);
+    const firstInvalid = (Object.keys(errors) as (keyof typeof errors)[]).find((k) => errors[k]);
+    if (firstInvalid) return refs[firstInvalid].current?.focus();
+
+    setBusy(true);
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
@@ -39,63 +60,103 @@ export function SignUpPage() {
     setBusy(false);
     if (signUpError) {
       setError(toAppError(signUpError));
+      setAttempt((n) => n + 1);
       return;
     }
-    // With email confirmation enabled there is no session yet.
+    // With email confirmation enabled there is no session yet; otherwise the guard redirects.
     if (!data.session) setSentTo(email.trim());
   };
 
   if (sentTo) {
     return (
-      <div className="container auth-card">
-        <h1>{t("auth.sign_up.check_email.title")}</h1>
-        <Notice tone="success">{t("auth.sign_up.check_email.body", { email: sentTo })}</Notice>
-        <Link to="/auth/sign-in">{t("auth.sign_in.link")}</Link>
-      </div>
+      <AuthLayout title={t("auth.sign_up.check_email.title")}>
+        <FormAlert tone="success">{t("auth.sign_up.check_email.body", { email: sentTo })}</FormAlert>
+        <p className="muted small">{t("auth.sign_up.check_email.hint")}</p>
+        <AuthLink to="/auth/sign-in">{t("auth.back_to_sign_in")}</AuthLink>
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="container auth-card">
-      <h1>{t("auth.sign_up.title")}</h1>
-      <p className="muted">{t("auth.sign_up.subtitle")}</p>
-      <form onSubmit={(e) => void submit(e)} className="stack">
-        <ErrorBanner error={error} />
-        <Field label={t("profile.display_name")} hint={t("profile.display_name.hint")}>
-          <input required maxLength={60} autoComplete="nickname" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-        </Field>
-        <Field label={t("auth.email")}>
-          <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-        </Field>
-        <Field
-          label={t("auth.password")}
-          hint={t("auth.password.hint", { min: MIN_PASSWORD })}
-          error={passwordTooShort ? t("auth.password.too_short", { min: MIN_PASSWORD }) : undefined}
-        >
+    <AuthLayout
+      title={t("auth.sign_up.title")}
+      subtitle={t("auth.sign_up.subtitle")}
+      footer={
+        <p>
+          {t("auth.sign_up.have_account")} <AuthLink to="/auth/sign-in">{t("auth.sign_in.link")}</AuthLink>
+        </p>
+      }
+    >
+      <form className="auth-form" noValidate onSubmit={(e) => void submit(e)} aria-busy={busy}>
+        <AuthErrorAlert error={error} focusKey={attempt} />
+        <Field label={t("profile.display_name")} hint={t("profile.display_name.hint")} error={show("name")}>
           <input
-            type="password"
-            autoComplete="new-password"
+            ref={refs.name}
             required
-            minLength={MIN_PASSWORD}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            maxLength={60}
+            autoComplete="nickname"
+            value={displayName}
+            disabled={busy}
+            onChange={(e) => setDisplayName(e.target.value)}
+            onBlur={touch("name")}
           />
         </Field>
-        <label className="checkbox">
-          <input type="checkbox" required checked={acceptedPrivacy} onChange={(e) => setAcceptedPrivacy(e.target.checked)} />
-          <span>
-            {t("auth.sign_up.privacy_prefix")} <Link to="/privacy">{t("nav.privacy")}</Link>
-          </span>
-        </label>
-        <Button type="submit" variant="primary" busy={busy} disabled={!acceptedPrivacy}>
-          {t("auth.sign_up.submit")}
+        <Field label={t("auth.email")} error={show("email")}>
+          <input
+            ref={refs.email}
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            spellCheck={false}
+            required
+            value={email}
+            disabled={busy}
+            onChange={(e) => setEmail(e.target.value)}
+            onBlur={touch("email")}
+          />
+        </Field>
+        <Field label={t("auth.password")} hint={t("auth.password.hint", { min: MIN_PASSWORD_LENGTH })} error={show("password")}>
+          <PasswordField
+            ref={refs.password}
+            autoComplete="new-password"
+            required
+            minLength={MIN_PASSWORD_LENGTH}
+            value={password}
+            disabled={busy}
+            onChange={(e) => setPassword(e.target.value)}
+            onBlur={touch("password")}
+          />
+        </Field>
+        <div className="field">
+          <label className="checkbox">
+            <input
+              ref={refs.privacy}
+              type="checkbox"
+              required
+              checked={acceptedPrivacy}
+              disabled={busy}
+              aria-invalid={show("privacy") ? true : undefined}
+              aria-describedby={show("privacy") ? "privacy-error" : undefined}
+              onChange={(e) => {
+                setAcceptedPrivacy(e.target.checked);
+                touch("privacy")();
+              }}
+            />
+            <span>
+              {t("auth.sign_up.privacy_prefix")} <Link to="/privacy">{t("nav.privacy")}</Link>
+            </span>
+          </label>
+          {show("privacy") && (
+            <p id="privacy-error" className="field-error" role="alert">
+              {show("privacy")}
+            </p>
+          )}
+        </div>
+        <Button type="submit" variant="primary" className="btn-block btn-lg" busy={busy}>
+          {busy ? t("auth.sign_up.submitting") : t("auth.sign_up.submit")}
         </Button>
       </form>
-      <p className="auth-links">
-        <span>
-          {t("auth.sign_up.have_account")} <Link to="/auth/sign-in">{t("auth.sign_in.link")}</Link>
-        </span>
-      </p>
-    </div>
+    </AuthLayout>
   );
 }

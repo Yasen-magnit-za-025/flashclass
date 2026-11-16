@@ -1,7 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
-import { Link, NavLink, Outlet, ScrollRestoration } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, NavLink, Outlet, ScrollRestoration, useNavigate } from "react-router-dom";
 import { UI_LOCALES, type UiLocale } from "@/domain/taxonomy";
+import { signOut } from "@/features/auth/signOut";
 import { useI18n } from "@/i18n/I18nProvider";
 import { supabase } from "@/lib/supabase";
 import { meQueryKey, useSession } from "./session";
@@ -49,6 +50,8 @@ function LocaleSwitcher() {
 export function Layout() {
   const { t } = useI18n();
   const { status, profile, isTeacher, isAdmin } = useSession();
+  const navigate = useNavigate();
+  const [signingOut, setSigningOut] = useState(false);
   useProfileLocaleSync();
 
   return (
@@ -78,7 +81,19 @@ export function Layout() {
                 <NavLink to="/profile" className="profile-link">
                   {profile?.display_name ?? t("nav.profile")}
                 </NavLink>
-                <button type="button" className="btn btn-ghost" onClick={() => void supabase.auth.signOut()}>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  disabled={signingOut}
+                  aria-busy={signingOut || undefined}
+                  onClick={() => {
+                    setSigningOut(true);
+                    void signOut().finally(() => {
+                      setSigningOut(false);
+                      navigate("/auth/sign-in?signedOut=1", { replace: true });
+                    });
+                  }}
+                >
                   {t("nav.sign_out")}
                 </button>
               </>

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { PageLoader } from "@/components/ui";
 import type { AppRole } from "@/domain/taxonomy";
+import { safeNextPath } from "@/features/auth/validation";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useSession } from "./session";
 
@@ -38,8 +39,7 @@ export function RedirectIfSignedIn({ children }: { children: ReactNode }) {
   const location = useLocation();
   if (status === "loading") return <PageLoader />;
   if (status === "signedIn") {
-    const next = new URLSearchParams(location.search).get("next");
-    return <Navigate to={next && next.startsWith("/") && !next.startsWith("//") ? next : "/"} replace />;
+    return <Navigate to={safeNextPath(new URLSearchParams(location.search).get("next"))} replace />;
   }
   return children;
 }
