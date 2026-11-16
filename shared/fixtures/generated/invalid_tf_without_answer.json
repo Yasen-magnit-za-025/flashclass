@@ -1,0 +1,18 @@
+{
+  "kind": "practice_test",
+  "title": "Broken",
+  "description": "",
+  "questions": [
+    {
+      "type": "true_false",
+      "prompt": "The sky is green.",
+      "options": [],
+      "correct_indices": [],
+      "correct_bool": null,
+      "accepted_answers": [],
+      "explanation": ""
+    }
+  ],
+  "cards": [],
+  "sections": []
+}

@@ -1,0 +1,18 @@
+{
+  "kind": "quiz",
+  "title": "Broken",
+  "description": "",
+  "questions": [
+    {
+      "type": "single_choice",
+      "prompt": "Pick one",
+      "options": ["A", "B"],
+      "correct_indices": [5],
+      "correct_bool": null,
+      "accepted_answers": [],
+      "explanation": ""
+    }
+  ],
+  "cards": [],
+  "sections": []
+}

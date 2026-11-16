@@ -1,0 +1,77 @@
+# Supabase local development config. Hosted project settings are configured in
+# the Supabase dashboard; keep them in sync with docs/operations.md.
+project_id = "flashclass"
+
+[api]
+enabled = true
+port = 54321
+# app_private is intentionally NOT exposed.
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 200
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[realtime]
+# Deliberately unused in the first release.
+enabled = false
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+# No document storage in the first release.
+enabled = false
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = [
+  "http://localhost:5173/auth/callback",
+  "http://localhost:5173/auth/reset",
+  "http://127.0.0.1:5173/auth/callback",
+  "http://127.0.0.1:5173/auth/reset",
+]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+enable_anonymous_sign_ins = false
+minimum_password_length = 8
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = true
+secure_password_change = true
+max_frequency = "1m0s"
+
+[auth.rate_limit]
+email_sent = 4
+sign_in_sign_ups = 30
+token_refresh = 150
+
+[edge_runtime]
+enabled = true
+policy = "per_worker"
+
+[functions.invite-teacher]
+enabled = true
+# The gateway rejects requests without a valid JWT; the function additionally
+# checks the caller's CURRENT admin grant in the database.
+verify_jwt = true
+
+[analytics]
+enabled = false

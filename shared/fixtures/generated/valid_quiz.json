@@ -1,0 +1,45 @@
+{
+  "kind": "quiz",
+  "title": "Фотосинтеза",
+  "description": "Основни понятия",
+  "questions": [
+    {
+      "type": "single_choice",
+      "prompt": "Къде протича фотосинтезата?",
+      "options": ["В митохондриите", "В хлоропластите", "В ядрото"],
+      "correct_indices": [1],
+      "correct_bool": null,
+      "accepted_answers": [],
+      "explanation": "Хлоропластите съдържат хлорофил."
+    },
+    {
+      "type": "multiple_select",
+      "prompt": "Кои вещества са нужни за фотосинтезата?",
+      "options": ["Вода", "Въглероден диоксид", "Азот"],
+      "correct_indices": [0, 1],
+      "correct_bool": null,
+      "accepted_answers": [],
+      "explanation": ""
+    },
+    {
+      "type": "true_false",
+      "prompt": "При фотосинтезата се отделя кислород.",
+      "options": [],
+      "correct_indices": [],
+      "correct_bool": true,
+      "accepted_answers": [],
+      "explanation": ""
+    },
+    {
+      "type": "short_answer",
+      "prompt": "Как се нарича зеленият пигмент в листата?",
+      "options": [],
+      "correct_indices": [],
+      "correct_bool": null,
+      "accepted_answers": ["хлорофил"],
+      "explanation": ""
+    }
+  ],
+  "cards": [],
+  "sections": []
+}
